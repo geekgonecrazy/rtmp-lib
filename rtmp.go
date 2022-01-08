@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -14,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/notedit/rtmp-lib/av"
-	"github.com/notedit/rtmp-lib/flv"
-	"github.com/notedit/rtmp-lib/pio"
+	"github.com/geekgonecrazy/rtmp-lib/av"
+	"github.com/geekgonecrazy/rtmp-lib/flv"
+	"github.com/geekgonecrazy/rtmp-lib/pio"
 )
 
 var Debug bool
@@ -25,8 +26,17 @@ func ParseURL(uri string) (u *url.URL, err error) {
 	if u, err = url.Parse(uri); err != nil {
 		return
 	}
+
+	defaultPort := ""
+	switch u.Scheme {
+	case "rtmp":
+		defaultPort = ":1935"
+	case "rtmps":
+		defaultPort = ":443"
+	}
+
 	if _, _, serr := net.SplitHostPort(u.Host); serr != nil {
-		u.Host += ":1935"
+		u.Host += defaultPort
 	}
 	return
 }
@@ -47,8 +57,13 @@ func DialTimeout(uri string, timeout time.Duration) (conn *Conn, err error) {
 		return
 	}
 
+	if u.Scheme == "rtmps" {
+		netconn = tls.Client(netconn, &tls.Config{InsecureSkipVerify: true})
+	}
+
 	conn = NewConn(netconn, 1024*100)
 	conn.URL = u
+
 	return
 }
 
@@ -67,7 +82,7 @@ type Server struct {
 
 func NewServer(config *Config) *Server {
 	server := &Server{
-		config:config,
+		config: config,
 	}
 	return server
 }
@@ -113,7 +128,6 @@ func (self *Server) ListenAndServe() (err error) {
 	if Debug {
 		fmt.Println("rtmp: server: listening on", addr)
 	}
-
 
 	for {
 		var netconn net.Conn

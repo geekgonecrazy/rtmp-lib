@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/notedit/rtmp-lib/av"
+	"github.com/geekgonecrazy/rtmp-lib/av"
 
-	rtmp "github.com/notedit/rtmp-lib"
-	"github.com/notedit/rtmp-lib/pubsub"
+	rtmp "github.com/geekgonecrazy/rtmp-lib"
+	"github.com/geekgonecrazy/rtmp-lib/pubsub"
 )
 
 type Channel struct {

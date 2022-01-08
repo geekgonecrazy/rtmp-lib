@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	rtmp "github.com/notedit/rtmp-lib"
+	rtmp "github.com/geekgonecrazy/rtmp-lib"
 )
 
 func main() {

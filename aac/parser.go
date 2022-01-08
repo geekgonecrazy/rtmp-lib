@@ -6,8 +6,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/notedit/rtmp-lib/av"
-	"github.com/notedit/rtmp-lib/bits"
+	"github.com/geekgonecrazy/rtmp-lib/av"
+	"github.com/geekgonecrazy/rtmp-lib/bits"
 )
 
 const (

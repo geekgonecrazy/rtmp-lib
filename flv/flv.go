@@ -6,10 +6,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/notedit/rtmp-lib/aac"
-	"github.com/notedit/rtmp-lib/av"
-	"github.com/notedit/rtmp-lib/h264"
-	"github.com/notedit/rtmp-lib/pio"
+	"github.com/geekgonecrazy/rtmp-lib/aac"
+	"github.com/geekgonecrazy/rtmp-lib/av"
+	"github.com/geekgonecrazy/rtmp-lib/h264"
+	"github.com/geekgonecrazy/rtmp-lib/pio"
 )
 
 var MaxProbePacketCount = 20

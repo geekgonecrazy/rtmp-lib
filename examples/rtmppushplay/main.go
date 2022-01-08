@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/notedit/rtmp-lib/av"
 	"time"
 
-	rtmp "github.com/notedit/rtmp-lib"
-)
+	"github.com/geekgonecrazy/rtmp-lib/av"
 
+	rtmp "github.com/geekgonecrazy/rtmp-lib"
+)
 
 var pubstream *rtmp.Conn
 var playstream *rtmp.Conn
@@ -28,9 +28,8 @@ func main() {
 
 		playstream = conn
 
-		streams,_ := pubstream.Streams()
+		streams, _ := pubstream.Streams()
 		playstream.WriteHeader(streams)
-
 
 		for {
 			time.Sleep(time.Second)
