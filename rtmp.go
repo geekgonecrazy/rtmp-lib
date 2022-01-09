@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/url"
 	"strings"
@@ -164,6 +165,8 @@ const (
 type Conn struct {
 	URL             *url.URL
 	OnPlayOrPublish func(string, flv.AMFMap) error
+
+	Debug bool
 
 	prober  *flv.Prober
 	streams []av.CodecData
@@ -382,16 +385,17 @@ var CodecTypes = flv.CodecTypes
 func (self *Conn) writeBasicConf() (err error) {
 	// > SetChunkSize
 
-	if err = self.writeSetChunkSize(1024 * 1024 * 128); err != nil {
+	if err = self.writeSetChunkSize(65536); err != nil {
 		return
 	}
 
 	// > WindowAckSize
-	if err = self.writeWindowAckSize(5000000); err != nil {
+	if err = self.writeWindowAckSize(2500000); err != nil {
 		return
 	}
 	// > SetPeerBandwidth
-	if err = self.writeSetPeerBandwidth(5000000, 2); err != nil {
+	if err = self.writeSetPeerBandwidth(2500000, 2); err != nil {
+
 		return
 	}
 	return
@@ -474,7 +478,7 @@ func (self *Conn) readConnect() (err error) {
 
 			// < publish("path")
 			case "publish":
-				if Debug {
+				if self.Debug {
 					fmt.Println("rtmp: < publish")
 				}
 
@@ -517,7 +521,7 @@ func (self *Conn) readConnect() (err error) {
 
 			// < play("path")
 			case "play":
-				if Debug {
+				if self.Debug {
 					fmt.Println("rtmp: < play")
 				}
 
@@ -629,7 +633,7 @@ func (self *Conn) writeConnect(path string) (err error) {
 	}
 
 	// > connect("app")
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: > connect('%s') host=%s\n", path, self.URL.Host)
 	}
 	if err = self.writeCommandMsg(3, 0, "connect", 1,
@@ -664,7 +668,7 @@ func (self *Conn) writeConnect(path string) (err error) {
 					err = fmt.Errorf("rtmp: command connect failed: %s", errmsg)
 					return
 				}
-				if Debug {
+				if self.Debug {
 					fmt.Printf("rtmp: < _result() of connect\n")
 				}
 				break
@@ -694,7 +698,7 @@ func (self *Conn) connectPublish() (err error) {
 	transid := 2
 
 	// > createStream()
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: > createStream()\n")
 	}
 	if err = self.writeCommandMsg(3, 0, "createStream", transid, nil); err != nil {
@@ -724,7 +728,7 @@ func (self *Conn) connectPublish() (err error) {
 	}
 
 	// > publish('app')
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: > publish('%s')\n", publishpath)
 	}
 	if err = self.writeCommandMsg(8, self.avmsgsid, "publish", transid, nil, publishpath); err != nil {
@@ -750,7 +754,7 @@ func (self *Conn) connectPlay() (err error) {
 	}
 
 	// > createStream()
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: > createStream()\n")
 	}
 	if err = self.writeCommandMsg(3, 0, "createStream", 2, nil); err != nil {
@@ -784,7 +788,7 @@ func (self *Conn) connectPlay() (err error) {
 	}
 
 	// > play('app')
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: > play('%s')\n", playpath)
 	}
 	if err = self.writeCommandMsg(8, self.avmsgsid, "play", 0, nil, playpath); err != nil {
@@ -890,11 +894,12 @@ func (self *Conn) WritePacket(pkt av.Packet) (err error) {
 	stream := self.streams[pkt.Idx]
 	tag, timestamp := flv.PacketToTag(pkt, stream)
 
-	if Debug {
+	if self.Debug {
 		fmt.Println("rtmp: WritePacket", pkt.Idx, pkt.Time, pkt.CompositionTime)
 	}
 
 	if err = self.writeAVTag(tag, int32(timestamp)); err != nil {
+		log.Println("Error WritePacket->AVTAG:", err)
 		return
 	}
 
@@ -1113,7 +1118,7 @@ func (self *Conn) fillChunkHeader(b []byte, csid uint32, timestamp int32, msgtyp
 		n += 4
 	}
 
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: write chunk msgdatalen=%d msgsid=%d\n", msgdatalen, msgsid)
 	}
 
@@ -1128,11 +1133,13 @@ func (self *Conn) flushWrite() (err error) {
 }
 
 func (self *Conn) readChunk() (err error) {
+
 	b := self.readbuf
 	n := 0
 	if _, err = io.ReadFull(self.bufr, b[:1]); err != nil {
 		return
 	}
+
 	header := b[0]
 	n += 1
 
@@ -1142,6 +1149,7 @@ func (self *Conn) readChunk() (err error) {
 	msghdrtype = header >> 6
 
 	csid = uint32(header) & 0x3f
+
 	switch csid {
 	default: // Chunk basic header 1
 	case 0: // Chunk basic header 2
@@ -1320,13 +1328,13 @@ func (self *Conn) readChunk() (err error) {
 	n += len(buf)
 	cs.msgdataleft -= uint32(size)
 
-	if Debug {
+	if self.Debug {
 		fmt.Printf("rtmp: chunk msgsid=%d msgtypeid=%d msghdrtype=%d len=%d left=%d\n",
 			cs.msgsid, cs.msgtypeid, cs.msghdrtype, cs.msgdatalen, cs.msgdataleft)
 	}
 
 	if cs.msgdataleft == 0 {
-		if Debug {
+		if self.Debug {
 			fmt.Println("rtmp: chunk data")
 			fmt.Print(hex.Dump(cs.msgdata))
 		}
@@ -1585,7 +1593,7 @@ func (self *Conn) handshakeClient() (err error) {
 		return
 	}
 
-	if Debug {
+	if self.Debug {
 		fmt.Println("rtmp: handshakeClient: server version", S1[4], S1[5], S1[6], S1[7])
 	}
 
