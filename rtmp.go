@@ -385,16 +385,16 @@ var CodecTypes = flv.CodecTypes
 func (self *Conn) writeBasicConf() (err error) {
 	// > SetChunkSize
 
-	if err = self.writeSetChunkSize(65536); err != nil {
+	if err = self.writeSetChunkSize(1024 * 1024 * 128); err != nil {
 		return
 	}
 
 	// > WindowAckSize
-	if err = self.writeWindowAckSize(2500000); err != nil {
+	if err = self.writeWindowAckSize(5000000); err != nil {
 		return
 	}
 	// > SetPeerBandwidth
-	if err = self.writeSetPeerBandwidth(2500000, 2); err != nil {
+	if err = self.writeSetPeerBandwidth(5000000, 2); err != nil {
 
 		return
 	}
